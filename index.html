@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Apagado de Bodega</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; text-align: center; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        .btn-apagar-todo { background-color: #d9534f; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 20px; width: 100%; }
+        .btn-apagar-todo:hover { background-color: #c9302c; }
+        .pc-card { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; background: #fafafa; }
+        .status-online { color: #5cb85c; font-weight: bold; }
+        .status-offline { color: #777; font-weight: bold; }
+        .btn-individual { background-color: #f0ad4e; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+        .btn-individual:hover { background-color: #ec971f; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Panel de Control de Energía - Bodega</h1>
+    <button class="btn-apagar-todo" onclick="apagarTodas()">🚨 APAGAR TODAS LAS COMPUTADORAS</button>
+    
+    <div id="lista-pcs">
+        <p>Cargando terminales conectadas...</p>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // REEMPLAZA CON LOS DATOS DE TU PROYECTO FIREBASE
+    const firebaseConfig = {
+        databaseURL: "https://apagadoautomatico-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Escuchar cambios en las PCs conectadas
+    const pcsRef = ref(db, 'computadoras');
+    onValue(pcsRef, (snapshot) => {
+        const data = snapshot.val();
+        const listaDiv = document.getElementById('lista-pcs');
+        listaDiv.innerHTML = '';
+
+        if (!data) {
+            listaDiv.innerHTML = '<p>No hay computadoras registradas.</p>';
+            return;
+        }
+
+        for (let pcId in data) {
+            const pc = data[pcId];
+            
+            // Verificar si reportó actividad en los últimos 30 segundos para considerarla Online
+            const esOnline = (Date.now() - pc.ultimaConexion) < 30000;
+            const statusText = esOnline ? '<span class="status-online">En Línea</span>' : '<span class="status-offline">Desconectada</span>';
+
+            const pcElement = document.createElement('div');
+            pcElement.className = 'pc-card';
+            pcElement.innerHTML = `
+                <div>
+                    <strong>${pcId}</strong> - ${statusText}
+                </div>
+                ${esOnline ? `<button class="btn-individual" onclick="apagarPC('${pcId}')">Apagar</button>` : ''}
+            `;
+            listaDiv.appendChild(pcElement);
+        }
+    });
+
+    // Función para apagar una PC específica
+    window.apagarPC = function(pcId) {
+        if(confirm(`¿Estás seguro de que deseas apagar la terminal ${pcId}?`)) {
+            set(ref(db, `computadoras/${pcId}/comando`), "shutdown");
+        }
+    }
+
+    // Función para apagar todo el almacén
+    window.apagarTodas = function() {
+        if(confirm("¿Estás seguro de que deseas apagar TODAS las computadoras activas de la bodega?")) {
+            set(ref(db, 'comando_global'), {
+                accion: "shutdown",
+                timestamp: Date.now()
+            });
+        }
+    }
+</script>
+</body>
+</html>
