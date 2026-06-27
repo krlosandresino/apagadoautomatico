@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Apagado de Bodega</title>
+    <title>📴 Control de Apagado PC</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; text-align: center; }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -20,8 +20,8 @@
 <body>
 
 <div class="container">
-    <h1>Panel de Control de Energía - Bodega</h1>
-    <button class="btn-apagar-todo" onclick="apagarTodas()">🚨 APAGAR TODAS LAS COMPUTADORAS</button>
+    <h1>📴 Panel de Control de PC</h1>
+    <button class="btn-apagar-todo" onclick="apagarTodas()">🖥️ APAGAR TODAS LAS COMPUTADORAS</button>
     
     <div id="lista-pcs">
         <p>Cargando terminales conectadas...</p>
@@ -74,19 +74,55 @@
     // Función para apagar una PC específica
     window.apagarPC = function(pcId) {
         if(confirm(`¿Estás seguro de que deseas apagar la terminal ${pcId}?`)) {
-            set(ref(db, `computadoras/${pcId}/comando`), "shutdown");
+            const password = prompt("Introduce la contraseña de seguridad para apagar la terminal:");
+            if (password === "Oriflame2026") {
+                set(ref(db, `computadoras/${pcId}/comando`), "shutdown");
+            } else if (password !== null) {
+                alert("Contraseña incorrecta. Acción cancelada.");
+            }
         }
     }
 
     // Función para apagar todo el almacén
     window.apagarTodas = function() {
         if(confirm("¿Estás seguro de que deseas apagar TODAS las computadoras activas de la bodega?")) {
-            set(ref(db, 'comando_global'), {
-                accion: "shutdown",
-                timestamp: Date.now()
-            });
+            const password = prompt("Introduce la contraseña de seguridad para proceder con el apagado global:");
+            if (password === "Oriflame2026") {
+                set(ref(db, 'comando_global'), {
+                    accion: "shutdown",
+                    timestamp: Date.now()
+                });
+            } else if (password !== null) {
+                alert("Contraseña incorrecta. Acción cancelada.");
+            }
         }
     }
+
+    // Bloqueo de Clic Derecho
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+    });
+
+    // Bloqueo de Atajos de Teclado (F12, Ctrl+U, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+S)
+    document.addEventListener('keydown', function(e) {
+        // F12
+        if (e.key === 'F12') {
+            e.preventDefault();
+            return false;
+        }
+        
+        // Ctrl + U y Ctrl + S
+        if (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            return false;
+        }
+        
+        // Ctrl + Shift + I y Ctrl + Shift + J
+        if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j')) {
+            e.preventDefault();
+            return false;
+        }
+    });
 </script>
 </body>
 </html>
