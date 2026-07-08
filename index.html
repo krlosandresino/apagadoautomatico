@@ -15,6 +15,9 @@
         .status-offline { color: #777; font-weight: bold; }
         .btn-individual { background-color: #f0ad4e; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
         .btn-individual:hover { background-color: #ec971f; }
+        /* Nuevo estilo para el botón de eliminar */
+        .btn-eliminar { background-color: #777; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-left: 5px; }
+        .btn-eliminar:hover { background-color: #555; }
     </style>
 </head>
 <body>
@@ -65,7 +68,10 @@
                 <div>
                     <strong>${pcId}</strong> - ${statusText}
                 </div>
-                ${esOnline ? `<button class="btn-individual" onclick="apagarPC('${pcId}')">Apagar</button>` : ''}
+                <div>
+                    ${esOnline ? `<button class="btn-individual" onclick="apagarPC('${pcId}')">Apagar</button>` : ''}
+                    <button class="btn-eliminar" onclick="eliminarPC('${pcId}')">Eliminar</button>
+                </div>
             `;
             listaDiv.appendChild(pcElement);
         }
@@ -77,6 +83,18 @@
             const password = prompt("Introduce la contraseña de seguridad para apagar la terminal:");
             if (password === "Oriflame2026") {
                 set(ref(db, `computadoras/${pcId}/comando`), "shutdown");
+            } else if (password !== null) {
+                alert("Contraseña incorrecta. Acción cancelada.");
+            }
+        }
+    }
+
+    // Función para eliminar una PC específica de la lista/base de datos
+    window.eliminarPC = function(pcId) {
+        if(confirm(`¿Estás seguro de que deseas eliminar la terminal ${pcId} de la lista?`)) {
+            const password = prompt("Introduce la contraseña de seguridad para eliminar la terminal:");
+            if (password === "Oriflame2026") {
+                set(ref(db, `computadoras/${pcId}`), null);
             } else if (password !== null) {
                 alert("Contraseña incorrecta. Acción cancelada.");
             }
