@@ -10,14 +10,17 @@
         h1 { color: #333; }
         .btn-apagar-todo { background-color: #d9534f; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 20px; width: 100%; }
         .btn-apagar-todo:hover { background-color: #c9302c; }
-        .pc-card { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; background: #fafafa; }
+        .pc-card { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; background: #fafafa; text-align: left; }
         .status-online { color: #5cb85c; font-weight: bold; }
         .status-offline { color: #777; font-weight: bold; }
         .btn-individual { background-color: #f0ad4e; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
         .btn-individual:hover { background-color: #ec971f; }
-        /* Nuevo estilo para el botón de eliminar */
         .btn-eliminar { background-color: #777; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-left: 5px; }
         .btn-eliminar:hover { background-color: #555; }
+        
+        /* Nuevos estilos integrados manteniendo el diseño original */
+        .stats-container { display: flex; justify-content: space-around; background: #fafafa; padding: 15px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 20px; font-size: 16px; font-weight: bold; }
+        .info-extra { font-size: 13px; color: #555; display: block; margin-top: 4px; font-weight: normal; }
     </style>
 </head>
 <body>
@@ -26,6 +29,13 @@
     <h1>📴 Panel de Control de PC</h1>
     <button class="btn-apagar-todo" onclick="apagarTodas()">🖥️ APAGAR TODAS LAS COMPUTADORAS</button>
     
+    <!-- Contadores de Estado -->
+    <div class="stats-container">
+        <span>Total: <strong id="count-total">0</strong></span>
+        <span class="status-online">En Línea: <strong id="count-online">0</strong></span>
+        <span class="status-offline">Desconectadas: <strong id="count-offline">0</strong></span>
+    </div>
+
     <div id="lista-pcs">
         <p>Cargando terminales conectadas...</p>
     </div>
@@ -50,23 +60,50 @@
         const listaDiv = document.getElementById('lista-pcs');
         listaDiv.innerHTML = '';
 
+        let totalPCs = 0;
+        let onlinePCs = 0;
+        let offlinePCs = 0;
+
         if (!data) {
             listaDiv.innerHTML = '<p>No hay computadoras registradas.</p>';
+            actualizarContadores(0, 0, 0);
             return;
         }
 
+        const tiempoActual = Date.now();
+        const limiteInactividad = 7 * 24 * 60 * 60 * 1000; // 7 días para mantenimiento automático
+
         for (let pcId in data) {
             const pc = data[pcId];
-            
-            // Verificar si reportó actividad en los últimos 30 segundos para considerarla Online
-            const esOnline = (Date.now() - pc.ultimaConexion) < 30000;
+            const tiempoInactiva = tiempoActual - pc.ultimaConexion;
+
+            // Mantenimiento Automático: Ocultar si lleva más de 7 días desconectada
+            if (tiempoInactiva > limiteInactividad) {
+                continue;
+            }
+
+            totalPCs++;
+
+            // Verificar si reportó actividad en los últimos 30 segundos
+            const esOnline = tiempoInactiva < 30000;
+            if (esOnline) {
+                onlinePCs++;
+            } else {
+                offlinePCs++;
+            }
+
             const statusText = esOnline ? '<span class="status-online">En Línea</span>' : '<span class="status-offline">Desconectada</span>';
+            
+            // Identificación Avanzada
+            const usuarioText = pc.usuario ? pc.usuario : 'Usuario desconocido';
+            const ipText = pc.ip ? pc.ip : 'Sin IP';
 
             const pcElement = document.createElement('div');
             pcElement.className = 'pc-card';
             pcElement.innerHTML = `
                 <div>
                     <strong>${pcId}</strong> - ${statusText}
+                    <span class="info-extra">👤 ${usuarioText} | 🌐 IP: ${ipText}</span>
                 </div>
                 <div>
                     ${esOnline ? `<button class="btn-individual" onclick="apagarPC('${pcId}')">Apagar</button>` : ''}
@@ -75,7 +112,20 @@
             `;
             listaDiv.appendChild(pcElement);
         }
+
+        actualizarContadores(totalPCs, onlinePCs, offlinePCs);
+
+        if (totalPCs === 0) {
+            listaDiv.innerHTML = '<p>No hay computadoras activas recientemente (limpieza aplicada).</p>';
+        }
     });
+
+    // Actualiza el panel superior de contadores
+    function actualizarContadores(total, online, offline) {
+        document.getElementById('count-total').innerText = total;
+        document.getElementById('count-online').innerText = online;
+        document.getElementById('count-offline').innerText = offline;
+    }
 
     // Función para apagar una PC específica
     window.apagarPC = function(pcId) {
@@ -89,7 +139,7 @@
         }
     }
 
-    // Función para eliminar una PC específica de la lista/base de datos
+    // Función para eliminar una PC específica de la lista
     window.eliminarPC = function(pcId) {
         if(confirm(`¿Estás seguro de que deseas eliminar la terminal ${pcId} de la lista?`)) {
             const password = prompt("Introduce la contraseña de seguridad para eliminar la terminal:");
@@ -121,21 +171,16 @@
         e.preventDefault();
     });
 
-    // Bloqueo de Atajos de Teclado (F12, Ctrl+U, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+S)
+    // Bloqueo de Atajos de Teclado
     document.addEventListener('keydown', function(e) {
-        // F12
         if (e.key === 'F12') {
             e.preventDefault();
             return false;
         }
-        
-        // Ctrl + U y Ctrl + S
         if (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 's' || e.key === 'S')) {
             e.preventDefault();
             return false;
         }
-        
-        // Ctrl + Shift + I y Ctrl + Shift + J
         if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j')) {
             e.preventDefault();
             return false;
