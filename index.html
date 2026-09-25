@@ -58,6 +58,9 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    // Variable para almacenar los IDs de las computadoras que están actualmente en línea
+    let computadorasOnlineIds = [];
+
     // Escuchar cambios en las PCs conectadas
     const pcsRef = ref(db, 'computadoras');
     onValue(pcsRef, (snapshot) => {
@@ -68,6 +71,8 @@
         let totalPCs = 0;
         let onlinePCs = 0;
         let offlinePCs = 0;
+
+        computadorasOnlineIds = []; // Limpiamos la lista en cada actualización de Firebase
 
         if (!data) {
             listaDiv.innerHTML = '<p>No hay computadoras registradas.</p>';
@@ -93,6 +98,7 @@
             const esOnline = tiempoInactiva < 30000;
             if (esOnline) {
                 onlinePCs++;
+                computadorasOnlineIds.push(pcId); // Guardamos el ID de la terminal en línea
             } else {
                 offlinePCs++;
             }
@@ -161,10 +167,18 @@
         if(confirm("¿Estás seguro de que deseas apagar TODAS las computadoras activas de la bodega?")) {
             const password = prompt("Introduce la contraseña de seguridad para proceder con el apagado global:");
             if (password === "Oriflame2026") {
+                
+                // 1. Iterar y enviar el comando de apagado individual a cada PC en línea 
+                computadorasOnlineIds.forEach(pcId => {
+                    set(ref(db, `computadoras/${pcId}/comando`), "shutdown");
+                });
+
+                // 2. Mantener también el comando global por compatibilidad y seguridad
                 set(ref(db, 'comando_global'), {
                     accion: "shutdown",
                     timestamp: Date.now()
                 });
+
             } else if (password !== null) {
                 alert("Contraseña incorrecta. Acción cancelada.");
             }
